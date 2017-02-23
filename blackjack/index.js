@@ -207,29 +207,20 @@ const shoe = {
         this.refresh();
     }
 };
+/**
+ * Stores global game state
+ */
 const gameState = {
     started: false,
     turn: false
 };
-/**
- * Checks Player for being a bankrupt
- * @returns {Boolean}
- */
-function isBankrupt() {
-    if (player.bank <= 0) {
-        console.log('You are a bankrupt. Welcome back when you get enough money to play this game.'.bold.red);
-        return true;
-    }
-    return false;
-}
-/**
- * Returns true if the entire input value is a valid number or float.
- * @param {*} num Any type to be checked
- */
-function isNumber(num) {
-    return !isNaN(num) && isFinite(num);
-}
 
+/**
+ * The game itself.
+ * @param {null|Number} bank Player's bank
+ * @param {number} packNumber Packs of cards quantity
+ * @returns {undefined}
+ */
 function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   // player's bank, packs number
     let winner, bet, prizeRate = 1;
     /**
@@ -237,7 +228,7 @@ function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   
      * dealing, asking for making first bets
      */
     (function () {
-        if (!gameState.started) { 
+        if (!gameState.started) {
             if (bank && isNumber(bank)) {
                 player.bank = parseInt(bank);
             } else {
@@ -316,11 +307,21 @@ function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   
         }
         event.emit('start', endGame);
     }
+    /**
+     * Deals cards to the player.
+     * @param {Number} count Deals as many cards as specified by this parameter
+     * @returns {undefined}
+     */
     function dealPlayer(count = 1) {
         while (count--) {
             player.cards = shoe.card;
     }
     }
+    /**
+     * Deals cards to the dealer.
+     * @param {Boolean} until17 If true, deals untid dealer's score reaches 17 or more
+     * @returns {undefined}
+     */
     function dealDealer(until17 = false) {
         if (!until17) {
             dealer.cards = shoe.card;
@@ -384,6 +385,24 @@ function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   
         });
     }
     /**
+     * Returns true if the entire input value is a valid number or float.
+     * @param {*} num Any type to be checked
+     */
+    function isNumber(num) {
+        return !isNaN(num) && isFinite(num);
+    }
+    /**
+     * Checks Player for being a bankrupt
+     * @returns {Boolean}
+     */
+    function isBankrupt() {
+        if (player.bank <= 0) {
+            console.log('You are a bankrupt. Welcome back when you get enough money to play this game.'.bold.red);
+            return true;
+        }
+        return false;
+    }
+    /**
      * shows players' status in console
      */
     function showStatus() {
@@ -414,7 +433,7 @@ function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   
         }
         win();
         resetState();
-        if (isBankrupt()){
+        if (isBankrupt()) {
             return;
         }
         event.emit('start', game);
