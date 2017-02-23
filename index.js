@@ -14,7 +14,7 @@ General usage:
     Options:
 --help          this help
 --log           file for storing game logs. If the file does not exist, then it will be created. Logging is turned off if this option is not present.
---game          choose game: BlackJack or Coin (not yet implemented).
+--game          choose game: BlackJack or Coin.
 --bank=VALUE    for BlackJack only. Startup capital. If not specified, VALUE=100.
 --packs=VALUE   for BlackJack only. Number of packs of cards. Default value 1.
 --view-log      log file to view
