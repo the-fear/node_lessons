@@ -369,7 +369,7 @@ function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   
                 event.emit('error', wrongValue + answer, placeBets);
                 return;
             }
-            answer = parseInt(answer);
+            answer = parseFloat(answer);
             if (!answer) {
                 event.emit('error', emptyBet, placeBets);
                 return;
