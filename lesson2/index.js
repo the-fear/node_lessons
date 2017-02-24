@@ -25,7 +25,7 @@ const checkFileName = filename => {
     return filename;
 };
 
-module.exports = (filename = '') => {
+module.exports = ({logFile:filename} = {filename:''}) => {
 
     filename = checkFileName(filename);
 
