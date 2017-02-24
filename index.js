@@ -32,13 +32,14 @@ Object.defineProperty(minimist, 'length', {
     enumerable: false
 });
 
-const blackJackSettings = {
+const settings = {
     packs: 1,
-    bank: 100
+    bank: 100,
+    logFile: ''
 };
-let logFile = '', game;
+let moduleToInvoke;
 
-/**
+/*
  * Returns true if the entire input value is a valid number or float.
  */
 function isNumber(num) {
@@ -54,7 +55,7 @@ if (minimist['view-log']) {
     let log = minimist['view-log'];
     switch (log) {
         case true:
-            console.log('Log file is not specified.');
+            console.log('Log file is not specified. Aborted.');
             process.exit(1);
             break;
         default :
@@ -63,43 +64,62 @@ if (minimist['view-log']) {
             console.log(buff.toString());
             process.exit(0);
         } catch (e) {
-            console.log(`No such file or directory: ${log}`);
+            console.log(`No such file or directory: ${log}. Aborted.`);
             process.exit(1);
         }
     }
 }
+
 if (minimist.log) {
-    switch (log) {
+    switch (minimist.log) {
         case true:
-            console.log('Log file is not specified. Aborterd.\n')
+            console.log('Log file is not specified. Aborterd.');
             process.exit(1);
             break;
 
         default:
-            logFile = minimist.log;
+            settings.logFile = minimist.log;
+            delete(minimist.log);
     }
 }
-if (minimist.packs) {
-    let packs = minimist.packs;
-    packs = isNumber(packs) ? parseInt(packs) : 1;
-    blackJackSettings.packs = packs;
-}
-if (minimist.bank && minimist.bank !== true) {
-    let bank = minimist.bank;
-    bank = isNumber(bank) ? parseInt(bank) : 100;
-    blackJackSettings.bank = bank;
-}
 
-if (minimist.game) {
-    let gameName = (typeof minimist.game === 'string') ? minimist.game.toLowerCase() : game;
+if (minimist.lesson) {
+    let lesson = minimist.lesson, str;
+    if (lesson === true) {
+        console.log('You need to specify the lesson number');
+        help();
+        process.exit(1);
+    }
+    str = './lesson' + lesson;
+    try {
+        moduleToInvoke = require(str);
+    } catch (e) {
+        console.log('There is no such a module. Did you mistype?');
+        process.exit(1);
+    }
+    delete(minimist.lesson);
+//    moduleToInvoke(settings);
+//    process.exit(0);
+} else if (minimist.game) {
+    let gameName = (typeof minimist.game === 'string') ? minimist.game.toLowerCase() : moduleToInvoke;
     switch (gameName) {
         case 'coin':
-            game = require('./lesson2');
-            game(logFile);
+            moduleToInvoke = require('./lesson2');
+//            moduleToInvoke(settings);
             break;
         case 'blackjack':
-            game = require('./blackjack/');
-            game(blackJackSettings);
+            if (minimist.packs) {
+                let packs = minimist.packs;
+                packs = isNumber(packs) ? parseInt(packs) : 1;
+                settings.packs = packs;
+            }
+            if (minimist.bank && minimist.bank !== true) {
+                let bank = minimist.bank;
+                bank = (isNumber(bank) && Boolean.i) ? parseInt(bank) : 100;
+                settings.bank = bank;
+            }
+            moduleToInvoke = require('./blackjack/');
+//            moduleToInvoke(settings);
             break;
         case true:
             console.log('Game to load is not specified.');
@@ -110,12 +130,16 @@ if (minimist.game) {
             process.exit(1);
             break;
     }
+    delete(minimist.game);
 }
 
-if (minimist.length() === 1) {
+if (minimist.length() > 1 || minimist['_'].length) {
+    console.log('\nUnknown arguments');
     help();
-} else if (!game) {
+    process.exit();
+} else if (!moduleToInvoke) {
     throw Error('Something weird has happened...');
 }
 
-//game(filename, bank);
+moduleToInvoke(settings);
+
