@@ -28,7 +28,7 @@ General usage:
 Object.defineProperties(minimist, {
     length: {
         get: function () {
-            return Object.keys(this).length;
+            return Object.keys(this).length + this['_'].length;
         },
         enumerable: false
     },
@@ -51,7 +51,7 @@ function isNumber(num) {
     return !isNaN(num) && isFinite(num);
 }
 
-if (minimist.help || (!minimist.length && !minimist['_'].length)) {
+if (minimist.help || !minimist.length) {
     help();
     process.exit(0);
 }
@@ -135,7 +135,7 @@ if (minimist.lesson) {
     delete (minimist.game);
 }
 
-if (minimist.length || minimist['_'].length) {
+if (minimist.length) {
     console.log('\nUnknown arguments');
     help();
     process.exit(1);
