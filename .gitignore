@@ -33,3 +33,6 @@ nbproject
 # External resources folder
 external_resource
 
+# Debug files
+launch.json
+
