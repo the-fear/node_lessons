@@ -25,11 +25,16 @@ General usage:
 /**
  * Adds method 'length' to the minimist object to be able to calculate its length
  */
-Object.defineProperty(minimist, 'length', {
-    value: function () {
-        return Object.keys(this).length;
+Object.defineProperties(minimist, {
+    length: {
+        get: function () {
+            return Object.keys(this).length;
+        },
+        enumerable: false
     },
-    enumerable: false
+    '_': {
+        enumerable: false
+    }
 });
 
 const settings = {
@@ -46,7 +51,7 @@ function isNumber(num) {
     return !isNaN(num) && isFinite(num);
 }
 
-if (minimist.help) {
+if (minimist.help || (!minimist.length && !minimist['_'].length)) {
     help();
     process.exit(0);
 }
@@ -58,15 +63,15 @@ if (minimist['view-log']) {
             console.log('Log file is not specified. Aborted.');
             process.exit(1);
             break;
-        default :
-        try {
-            let buff = fs.readFileSync(log);
-            console.log(buff.toString());
-            process.exit(0);
-        } catch (e) {
-            console.log(`No such file or directory: ${log}. Aborted.`);
-            process.exit(1);
-        }
+        default:
+            try {
+                let buff = fs.readFileSync(log);
+                console.log(buff.toString());
+                process.exit(0);
+            } catch (e) {
+                console.log(`No such file or directory: ${log}. Aborted.`);
+                process.exit(1);
+            }
     }
 }
 
@@ -79,7 +84,7 @@ if (minimist.log) {
 
         default:
             settings.logFile = minimist.log;
-            delete(minimist.log);
+            delete (minimist.log);
     }
 }
 
@@ -93,19 +98,17 @@ if (minimist.lesson) {
     str = './lesson' + lesson;
     try {
         moduleToInvoke = require(str);
+        console.log(typeof moduleToInvoke, moduleToInvoke);
     } catch (e) {
         console.log('There is no such a module. Did you mistype?');
         process.exit(1);
     }
-    delete(minimist.lesson);
-//    moduleToInvoke(settings);
-//    process.exit(0);
+    delete (minimist.lesson);
 } else if (minimist.game) {
     let gameName = (typeof minimist.game === 'string') ? minimist.game.toLowerCase() : moduleToInvoke;
     switch (gameName) {
         case 'coin':
             moduleToInvoke = require('./lesson2');
-//            moduleToInvoke(settings);
             break;
         case 'blackjack':
             if (minimist.packs) {
@@ -119,7 +122,6 @@ if (minimist.lesson) {
                 settings.bank = bank;
             }
             moduleToInvoke = require('./blackjack/');
-//            moduleToInvoke(settings);
             break;
         case true:
             console.log('Game to load is not specified.');
@@ -130,15 +132,17 @@ if (minimist.lesson) {
             process.exit(1);
             break;
     }
-    delete(minimist.game);
+    delete (minimist.game);
 }
 
-if (minimist.length() > 1 || minimist['_'].length) {
+if (minimist.length || minimist['_'].length) {
     console.log('\nUnknown arguments');
     help();
-    process.exit();
+    process.exit(1);
 } else if (!moduleToInvoke) {
+    console.log(minimist);
     throw Error('Something weird has happened...');
+    process.exit(2);
 }
 
 moduleToInvoke(settings);
