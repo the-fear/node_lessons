@@ -1,14 +1,27 @@
 /* global Infinity */
-
+require('colors');
 const readline = require('readline');
 const Emit = require('events');
-const colors = require('colors');
+
 const rl = readline.Interface({
     input: process.stdin,
     output: process.stdout
 });
-rl.pause();
+
+/* This handles alls non-standard events */
 const event = new Emit;
+
+/**
+ * Stores global game state
+ */
+const gameState = {
+    started: false,
+    turn: false,
+    locale: '',
+    packNumber: 0
+};
+const message = require('./locale')(gameState);
+
 /**
  * The father of all cards in this game
  */
@@ -17,21 +30,33 @@ const Card = {
     score: 0,
     card: ''
 };
+
 /**
  * @class Player is the core class for the players. Contains everything related to them.
  */
 class Player {
+
+    /**
+     * @param {String} name Player's name
+     * @param {Number} bank Player's cache
+     */
     constructor(name, bank) {
         this.name = name;
         this.bank = bank;
+
         /** @member {Card[]} */
         this._cards = [];
         this.score = 0;
         this.cardsAsString = '';
     }
+
     get cards() {
         return this._cards;
     }
+
+    /**
+     * @param {Object} card A card to be added to the player's hand
+     */
     set cards(card) {
         if (Card.isPrototypeOf(card)) {
             this._cards.push(card);
@@ -39,6 +64,7 @@ class Player {
             this.score = this._countScore(this._cards);
         }
     }
+
     /**
      * Resets player's state between games
      * @returns {undefined}
@@ -48,6 +74,7 @@ class Player {
         this._cards = [];
         this.cardsAsString = '';
     }
+
     /**
      * Converts the array of the player's cards into a string.
      * Is used when displaing player's state.
@@ -55,11 +82,13 @@ class Player {
      */
     _cardsToString() {
         let result = [];
+
         for (let i = 0, max = this.cards.length; i < max; i++) {
             result.push(this.cards[i].card);
         }
-        return result.join(', ') + '.';
+        return result.join(', ');
     }
+
     /**
      * Calculates current player's score
      * @param {Card[]} arr
@@ -67,6 +96,7 @@ class Player {
      */
     _countScore(arr) {
         let max = arr.length, score = 0, aces = 0;
+
         for (let i = 0; i < max; i++) {
             if (!Card.isPrototypeOf(arr[i])) {
                 return false;
@@ -76,16 +106,20 @@ class Player {
             }
             score += arr[i].score;
         }
+
         while (score > 21 && aces) {
             aces--;
             score -= 10;
         }
+
         return score;
     }
 }
+
 const player = new Player('Player', 0);
 player.lastBet = 0;
 const dealer = new Player('Dealer', Infinity);
+
 /**
  * Shoe. Just a dealer's shoe.
  */
@@ -110,6 +144,7 @@ const shoe = {
         },
         suits: ['diamonds', 'spades', 'clubs', 'hearts']
     },
+
     /**
      * gets number of packs of cards
      * @returns {Number}
@@ -117,8 +152,9 @@ const shoe = {
     get numberOfPacks() {
         return this._numberOfPacks;
     },
+
     /**
-     * sets the number of packs of cards. will be rechecked and might be 
+     * sets the number of packs of cards. will be rechecked and might be
      * corrected on refresh()
      * @param {number} value number of packs of cards
      * @returns {undefined}
@@ -127,13 +163,16 @@ const shoe = {
         if (this._numberOfPacks) {
             return;
         }
+
         let temp = parseInt(value);
+
         if (!isNaN(temp)) {
             this._numberOfPacks = temp;
         } else {
             this._numberOfPacks = 1;
         }
     },
+
     /**
      * Returns a card or false if the shoe is empty
      * @returns {Card|Boolean}
@@ -145,6 +184,7 @@ const shoe = {
         }
         return this._cards.pop();
     },
+
     /**
      * Checks if the current state of the shoe is acceptable for continuing game
      * @returns {Boolean}
@@ -155,6 +195,7 @@ const shoe = {
         }
         return true;
     },
+
     /**
      * Refreshes the shoe. This means that old cards are thrown away, new cards
      * are combined and shuffled. This doesn't controll cards stored on players' hands
@@ -162,27 +203,32 @@ const shoe = {
      */
     refresh: function () {
         this._cards = [];
-        let result = [];
+        let result = [], pack = [];
         this._numberOfPacks = this._numberOfPacks > 8 ? 8 : this._numberOfPacks;
-        for (let i = 0, max = this._desk.suits.length; i < max; i++) {
-            for (let j in this._desk.range) {
+
+        /* Creates a pack of cards depending on the _desk description */
+        this._desk.suits.forEach((v, index, array) => {
+            Object.keys(this._desk.range).forEach(key => {
                 let card = Object.create(Card);
-                card.suit = this._desk.suits[i];
-                card.score = this._desk.range[j];
-                card.card = j;
-                result.push(card);
-            }
+                card.suit = array[index];
+                card.score = this._desk.range[key];
+                card.card = key;
+                pack.push(card);
+            });
+        });
+
+        for (let i = 0, max = this._numberOfPacks; i < max; i++) {
+            result = result.concat(pack);
         }
-        for (let i = 0; i < this._numberOfPacks - 1; i++) {
-            result = result.concat(result);
-        }
+
         this._shuffle(result);
         this._cards = result;
     },
+
     /**
      * Suffles the cards in the shoe
      * @param {Card[]} arr Cards
-     * @returns {Card[]} 
+     * @returns {Card[]}
      */
     _shuffle: function (arr) {
         if (!(arr instanceof Array)) {
@@ -194,6 +240,7 @@ const shoe = {
         }
         return arr;
     },
+
     /**
      * Initiates the shoe.
      * @param {Number|undefined} numberOfPacks
@@ -207,13 +254,6 @@ const shoe = {
         this.refresh();
     }
 };
-/**
- * Stores global game state
- */
-const gameState = {
-    started: false,
-    turn: false
-};
 
 /**
  * The game itself.
@@ -221,48 +261,74 @@ const gameState = {
  * @param {number} packNumber Packs of cards quantity
  * @returns {undefined}
  */
-function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   // player's bank, packs number
+function game({bank: bank, packs: packNumber, locale: locale}) {   // player's bank, packs number
     let winner, bet, prizeRate = 1;
+
+    if (!locale && !gameState.locale){
+        gameState.locale = 'en';
+    } else if (gameState.locale) {
+        locale = gameState.locale;
+    } else if (!gameState.locale && locale && message.supports(locale)) {
+        gameState.locale = locale;
+    } else {
+        throw Error(`Locale ${locale} is not supported by this application, or something else happened. Game state ${gameState}`);
+    }
+
+    if (!gameState.packNumber && packNumber){
+
+        if (isNumber(packNumber)){
+            gameState.packNumber = parseInt(packNumber);
+        } else {
+            throw Error('Number of packs must be a valid number');
+        }
+        
+    } else if (!gameState.packNumber && !packNumber){
+        gameState.packNumber = 1;
+    }
+
     /**
      * Preparations in the very beginning of the game. A welcome message, initial
      * dealing, asking for making first bets
      */
     (function () {
         if (!gameState.started) {
+
             if (bank && isNumber(bank)) {
                 player.bank = parseInt(bank);
             } else {
-                console.log('You need to specify your startup capital to play this game. Aborted.'.bold.red);
-                rl.close();
+                console.log(message.emptyBank[locale]);
+                process.exit(3);
                 return;
             }
-            console.log('Hello, fellow player! We\'re glad to see you here. Got some money? So let\'s begin!'.blue.bold);
+
+            console.log(message.greeting[locale]);
             gameState.started = true;
             shoe.numberOfPacks = packNumber;
         }
-
         if (shoe.numberOfPacks === 1) {
             shoe.refresh();
         }
-
         if (!shoe.isValid()) {
             shoe.refresh();
         }
-        resetState();           // сброс состояния игры
-        shoe.init();          // подготовка шуза
+
+        resetState();
+        shoe.init();
         dealPlayer(2);
         dealDealer();
+
         event.emit('start', placeBets);
     })();
+    
     /**
      * Asks the Player for being dealed. I rejected, deals for Dealer and gives
      * control to the endGame module
      */
     function askForDeal() {
-        rl.question('Do you want me to deal? (Y/n) ', answer => {
+        rl.question(message.askForDeal[locale], answer => {
             rl.pause();
-
             answer = answer.toLowerCase();
+
             if (answer[0] === 'y' || answer === '') {
                 dealPlayer();
                 event.emit('start', deal);
@@ -270,23 +336,29 @@ function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   
                 dealDealer(true);
                 event.emit('start', endGame);
             }
+
         });
     }
+
     /**
-     * Main controller block. All the game happenes here. 
+     * Main controller block. All the game happenes here.
      */
     function deal() {
         showStatus();
+
         if (player.score < 21) {
             askForDeal();
             return;
         } else if (player.score === 21 && player.cards.length === 2) { // check for blackjack
-            console.log('BlackJack!!!');
+            console.log(message.blackjack[locale].green.bold);
+
             if (dealer.score >= 10) {
-                const message = `Are you ready to get your prize 1:1 now or, if you aren't, wait to win 3:2! (g/W) `;
-                rl.question(message, answer => {
-                    const error = `I didn't get you. Type correctly.`.bold.red;
+                const question = message.getPrizeNow[locale];
+
+                rl.question(question, answer => {
+                    const error = message.dontUnerstand[locale];
                     answer = answer.toLowerCase();
+
                     if (answer[0] === 'w' || answer === '') {
                         prizeRate = 1.5;
                         dealDealer(true);
@@ -297,16 +369,20 @@ function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   
                         event.emit('error', error, deal);
                     }
                 });
+
             } else {
                 prizeRate = 1.5;
                 event.emit('start', endGame);
             }
             return;
+
         } else if (player.score === 21) {
             dealDealer(true);
         }
+
         event.emit('start', endGame);
     }
+
     /**
      * Deals cards to the player.
      * @param {Number} count Deals as many cards as specified by this parameter
@@ -315,8 +391,9 @@ function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   
     function dealPlayer(count = 1) {
         while (count--) {
             player.cards = shoe.card;
+        }
     }
-    }
+
     /**
      * Deals cards to the dealer.
      * @param {Boolean} until17 If true, deals untid dealer's score reaches 17 or more
@@ -329,8 +406,9 @@ function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   
             while (dealer.score < 17) {
                 dealer.cards = shoe.card;
             }
+        }
     }
-    }
+
     /**
      * Dropt all data to the default state between games, escept Player's bank and the shoe
      */
@@ -341,21 +419,25 @@ function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   
         prizeRate = 1;
         bet = 0;
     }
+
     /**
      * Asks user for placing bets and is placing them.
      */
     function placeBets() {
-        const wrongValue = 'The answer is not a valid amount of money: '.bold.red;
-        const notEnoughMoney = 'You\'ve got not enough money to place this bet.'.bold.red;
-        const emptyBet = 'You cannot play without placing bets.'.bold.red;
-        let repeat = false, message;
+
+        const wrongMoney = message.wrongMoney[locale];
+        const notEnoughMoney = message.notEnoughMoney[locale];
+        const emptyBet = message.emptyBet[locale];
+        let repeat = false, question;
+
         if (player.lastBet && player.lastBet <= player.bank) {
-            message = `Your last bet is \$${player.lastBet}. Would you like to place the same bet this time? (Enter/123) `;
+            question = message.combine('askLastBet', [player.lastBet], locale);
             repeat = true;
         } else {
-            message = `You've got \$${player.bank}. Place your bets. (sum) `;
+            question = message.combine('askBet', [player.bank], locale);
         }
-        rl.question(message, answer => {
+
+        rl.question(question, answer => {
             if (repeat) {
                 answer = answer.toLowerCase();
                 if (answer[0] === 'y' || answer === '') {
@@ -366,9 +448,10 @@ function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   
                 }
             }
             if (!isNumber(answer)) {
-                event.emit('error', wrongValue + answer, placeBets);
+                event.emit('error', wrongMoney + answer, placeBets);
                 return;
             }
+
             answer = parseFloat(answer);
             if (!answer) {
                 event.emit('error', emptyBet, placeBets);
@@ -378,12 +461,14 @@ function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   
                 event.emit('error', notEnoughMoney, placeBets);
                 return;
             }
+
             bet = answer;
             player.lastBet = bet;
             player.bank -= bet;
             event.emit('start', deal);
         });
     }
+
     /**
      * Returns true if the entire input value is a valid number or float.
      * @param {*} num Any type to be checked
@@ -391,24 +476,33 @@ function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   
     function isNumber(num) {
         return !isNaN(num) && isFinite(num);
     }
+
     /**
      * Checks Player for being a bankrupt
      * @returns {Boolean}
      */
     function isBankrupt() {
         if (player.bank <= 0) {
-            console.log('You are a bankrupt. Welcome back when you get enough money to play this game.'.bold.red);
+            console.log(message.bankrupt[locale]);
             return true;
         }
         return false;
     }
+
     /**
      * shows players' status in console
      */
     function showStatus() {
-        console.log(`Player's cards ${player.cardsAsString}, score ${player.score};`);
-        console.log(`Dealer's cards ${dealer.cardsAsString}, score ${dealer.score}`);
+        console.log(message.combine('playerCards', [
+            player.cardsAsString,
+            player.score
+        ], locale));
+        console.log(message.combine('dealerCards', [
+            dealer.cardsAsString,
+            dealer.score
+        ], locale));
     }
+
     /**
      * Finds the winner depending on their scores. Shares functionality with deal() function.
      * Terminates the game when Player becomes a bankrupt.
@@ -431,13 +525,21 @@ function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   
         } else if (dealer.score > 21) {
             winner = player;
         }
+
         win();
         resetState();
+
+        /* Stop the game if the player cannot pay any longer */
         if (isBankrupt()) {
             return;
         }
-        event.emit('start', game);
+
+        event.emit('start', game, {
+            bank: null
+        });
+
         return;
+
         /**
          * Tells user about the winner, distributes game currency
          * @returns {undefined}
@@ -445,7 +547,7 @@ function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   
         function win() {
             if (!winner) {
                 player.bank += bet;
-                console.log(`Push! ${player.name}'s bet has been returned. ${player.name}'s bank: \$${player.bank}`.bold);
+                console.log(message.combine('push', [player.bank], locale).bold);
                 showStatus();
                 return;
             }
@@ -453,24 +555,41 @@ function game( {bank:bank, packs:packNumber} = {bank: null, packNumber: 1}) {   
             winner.bank += (prize + bet);
             showStatus();
             if (winner === player) {
-                console.log(`${player.name} wins! ${player.name}'s prize: \$${prize}. Bank: \$${player.bank}`.green.bold);
+                console.log(message.combine('playerWins', [
+                    prize,
+                    player.bank
+                ], locale).green.bold);
             } else {
-                console.log(`${dealer.name} wins! ${player.name}'s bank: \$${player.bank}`.yellow.bold);
+                console.log(message.combine('dealerWins', [
+                    dealer.name,
+                    player.bank
+                ], locale).yellow.bold);
             }
         }
+    }
 }
-}
+
 /**
- * @param {String} error 
- * @param {Function} callback 
- * @param {*} args 
+ * It's easy to guess what this event is inteded for
+ * @param {String} error
+ * @param {Function} callback
+ * @param {*} args
  */
 event.on('error', (error, callback, args) => {
     console.log(error);
     callback(args);
 });
+
+/**
+ * Tis event is intended for starting something asynchronously
+ */
 event.on('start', (callback, args) => {
     callback(args);
 });
 
+/** End game on SIGINT (or Ctrl+C) */
+rl.on('SIGINT', () => {
+    console.log('\n' + message.goodbye[gameState.locale].yellow.bold);
+    process.exit(0);
+});
 module.exports = game;

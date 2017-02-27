@@ -8,7 +8,7 @@ General usage:
     
     node index.js --game coin
     node index.js --game coin --log coin.log
-    node index.js --game blackjack --bank=100 --log coin.log
+    node index.js --game blackjack --bank=100 --locale ru
     node index.js --view-log coin.log
     
     Options:
@@ -17,6 +17,7 @@ General usage:
 --game          choose game: BlackJack or Coin.
 --bank=VALUE    for BlackJack only. Startup capital. If not specified, VALUE=100.
 --packs=VALUE   for BlackJack only. Number of packs of cards. Default value 1.
+--locale=VALUE  Select the locale 
 --view-log      log file to view
 --lesson=NUMBER is used instead of --game to load the lesson module you need 
 `);
@@ -25,17 +26,23 @@ General usage:
 /**
  * Adds method 'length' to the minimist object to be able to calculate its length
  */
-Object.defineProperty(minimist, 'length', {
-    value: function () {
-        return Object.keys(this).length;
+Object.defineProperties(minimist, {
+    length: {
+        get: function () {
+            return Object.keys(this).length + this['_'].length;
+        },
+        enumerable: false
     },
-    enumerable: false
+    '_': {
+        enumerable: false
+    }
 });
 
 const settings = {
     packs: 1,
-    bank: 100,
-    logFile: ''
+    bank: 0,
+    logFile: '',
+    locale: 'en'
 };
 let moduleToInvoke;
 
@@ -46,7 +53,7 @@ function isNumber(num) {
     return !isNaN(num) && isFinite(num);
 }
 
-if (minimist.help) {
+if (minimist.help || !minimist.length) {
     help();
     process.exit(0);
 }
@@ -54,11 +61,11 @@ if (minimist.help) {
 if (minimist['view-log']) {
     let log = minimist['view-log'];
     switch (log) {
-        case true:
-            console.log('Log file is not specified. Aborted.');
-            process.exit(1);
-            break;
-        default :
+    case true:
+        console.log('Log file is not specified. Aborted.');
+        process.exit(1);
+        break;
+    default:
         try {
             let buff = fs.readFileSync(log);
             console.log(buff.toString());
@@ -72,17 +79,20 @@ if (minimist['view-log']) {
 
 if (minimist.log) {
     switch (minimist.log) {
-        case true:
-            console.log('Log file is not specified. Aborterd.');
-            process.exit(1);
-            break;
+    case true:
+        console.log('Log file is not specified. Aborterd.');
+        process.exit(1);
+        break;
 
-        default:
-            settings.logFile = minimist.log;
-            delete(minimist.log);
+    default:
+        settings.logFile = minimist.log;
+        delete (minimist.log);
     }
 }
-
+if (minimist.locale !== true && minimist.locale) {
+    settings.locale = minimist.locale;
+    delete(minimist.locale);
+}
 if (minimist.lesson) {
     let lesson = minimist.lesson, str;
     if (lesson === true) {
@@ -93,51 +103,51 @@ if (minimist.lesson) {
     str = './lesson' + lesson;
     try {
         moduleToInvoke = require(str);
+        console.log(typeof moduleToInvoke, moduleToInvoke);
     } catch (e) {
         console.log('There is no such a module. Did you mistype?');
         process.exit(1);
     }
-    delete(minimist.lesson);
-//    moduleToInvoke(settings);
-//    process.exit(0);
+    delete (minimist.lesson);
 } else if (minimist.game) {
     let gameName = (typeof minimist.game === 'string') ? minimist.game.toLowerCase() : moduleToInvoke;
     switch (gameName) {
-        case 'coin':
-            moduleToInvoke = require('./lesson2');
-//            moduleToInvoke(settings);
-            break;
-        case 'blackjack':
-            if (minimist.packs) {
-                let packs = minimist.packs;
-                packs = isNumber(packs) ? parseInt(packs) : 1;
-                settings.packs = packs;
-            }
-            if (minimist.bank && minimist.bank !== true) {
-                let bank = minimist.bank;
-                bank = (isNumber(bank) && Boolean.i) ? parseInt(bank) : 100;
-                settings.bank = bank;
-            }
-            moduleToInvoke = require('./blackjack/');
-//            moduleToInvoke(settings);
-            break;
-        case true:
-            console.log('Game to load is not specified.');
-            process.exit(1);
-            break;
-        default:
-            console.log('Unknown game\n');
-            process.exit(1);
-            break;
+    case 'coin':
+        moduleToInvoke = require('./lesson2');
+        break;
+    case 'blackjack':
+        if (minimist.packs) {
+            let packs = minimist.packs;
+            packs = isNumber(packs) ? parseInt(packs) : 1;
+            settings.packs = packs;
+            delete(minimist.packs);
+        }
+        if (minimist.bank && minimist.bank !== true) {
+            let bank = minimist.bank;
+            bank = isNumber(bank) ? parseInt(bank) : 100;
+            settings.bank = bank;
+            delete(minimist.bank);
+        }
+        moduleToInvoke = require('./blackjack/');
+        break;
+    case true:
+        console.log('Game to load is not specified.');
+        process.exit(1);
+        break;
+    default:
+        console.log('Unknown game\n');
+        process.exit(1);
+        break;
     }
-    delete(minimist.game);
+    delete (minimist.game);
 }
 
-if (minimist.length() > 1 || minimist['_'].length) {
-    console.log('\nUnknown arguments');
+if (minimist.length) {
+    console.log('\nUnknown arguments', minimist);
     help();
-    process.exit();
+    process.exit(1);
 } else if (!moduleToInvoke) {
+    console.log(minimist);
     throw Error('Something weird has happened...');
 }
 
