@@ -8,7 +8,7 @@ General usage:
     
     node index.js --game coin
     node index.js --game coin --log coin.log
-    node index.js --game blackjack --bank=100 --log coin.log
+    node index.js --game blackjack --bank=100 --locale ru
     node index.js --view-log coin.log
     
     Options:
@@ -17,6 +17,7 @@ General usage:
 --game          choose game: BlackJack or Coin.
 --bank=VALUE    for BlackJack only. Startup capital. If not specified, VALUE=100.
 --packs=VALUE   for BlackJack only. Number of packs of cards. Default value 1.
+--locale=VALUE  Select the locale 
 --view-log      log file to view
 --lesson=NUMBER is used instead of --game to load the lesson module you need 
 `);
@@ -39,8 +40,9 @@ Object.defineProperties(minimist, {
 
 const settings = {
     packs: 1,
-    bank: 100,
-    logFile: ''
+    bank: 0,
+    logFile: '',
+    locale: 'en'
 };
 let moduleToInvoke;
 
@@ -87,7 +89,10 @@ if (minimist.log) {
         delete (minimist.log);
     }
 }
-
+if (minimist.locale !== true && minimist.locale) {
+    settings.locale = minimist.locale;
+    delete(minimist.locale);
+}
 if (minimist.lesson) {
     let lesson = minimist.lesson, str;
     if (lesson === true) {
@@ -115,11 +120,13 @@ if (minimist.lesson) {
             let packs = minimist.packs;
             packs = isNumber(packs) ? parseInt(packs) : 1;
             settings.packs = packs;
+            delete(minimist.packs);
         }
         if (minimist.bank && minimist.bank !== true) {
             let bank = minimist.bank;
-            bank = (isNumber(bank) && Boolean.i) ? parseInt(bank) : 100;
+            bank = isNumber(bank) ? parseInt(bank) : 100;
             settings.bank = bank;
+            delete(minimist.bank);
         }
         moduleToInvoke = require('./blackjack/');
         break;
@@ -136,7 +143,7 @@ if (minimist.lesson) {
 }
 
 if (minimist.length) {
-    console.log('\nUnknown arguments');
+    console.log('\nUnknown arguments', minimist);
     help();
     process.exit(1);
 } else if (!moduleToInvoke) {
