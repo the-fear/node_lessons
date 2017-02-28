@@ -46,19 +46,19 @@ module.exports = state => {
          */
         combine(messageName, args) {
             if (!messageName || !args) {
-                throw Error('All the three parameters must be specified.');
+                throw Error('All the two parameters must be specified. And they mustn\'t be == false');
             }
             if (typeof messageName !== 'string') {
                 throw Error('Input message is not a type of string: ' + typeof messageName);
             }
             if (!(args instanceof Array)) {
-                throw Error('message.combine second parameter must be an array');
+                throw Error('The second parameter must be an array');
             }
-            return this[messageName][gameState.locale].map((v, i) => {
-                if (typeof v !== 'string' && !v.toString) {
-                    throw Error('message.combine second parameter cannot be transformed into a string');
+            return this[messageName][gameState.locale].map((value, index) => {
+                if (typeof value !== 'string' && !value.toString) {
+                    throw Error('Parameter cannot be transformed into a string');
                 }
-                return v + (args[i] ? args[i] : '');
+                return value + (args[index] ? args[index] : '');
             }).join('');
         },
 
