@@ -8,7 +8,7 @@ General usage:
     
     node index.js --game coin
     node index.js --game coin --log coin.log
-    node index.js --game blackjack --bank=100 --locale ru
+    node index.js --game blackjack --bank=100 --lang ru
     node index.js --view-log coin.log
     
     Options:
@@ -17,7 +17,7 @@ General usage:
 --game          choose game: BlackJack or Coin.
 --bank=VALUE    for BlackJack only. Startup capital. If not specified, VALUE=100.
 --packs=VALUE   for BlackJack only. Number of packs of cards. Default value 1.
---locale=VALUE  Select the locale 
+--lang=VALUE    Select the lang 
 --view-log      log file to view
 --lesson=NUMBER is used instead of --game to load the lesson module you need 
 `);
@@ -42,8 +42,9 @@ const settings = {
     packs: 1,
     bank: 0,
     logFile: '',
-    locale: 'en'
+    lang: 'en'
 };
+
 let moduleToInvoke;
 
 /*
@@ -89,45 +90,55 @@ if (minimist.log) {
         delete (minimist.log);
     }
 }
-if (minimist.locale !== true && minimist.locale) {
-    settings.locale = minimist.locale;
-    delete(minimist.locale);
+
+if (minimist.lang !== true && minimist.lang) {
+    settings.lang = minimist.lang;
+    delete (minimist.lang);
 }
+
 if (minimist.lesson) {
+
     let lesson = minimist.lesson, str;
     if (lesson === true) {
         console.log('You need to specify the lesson number');
         help();
         process.exit(1);
     }
+    if (lesson == 3) {
+        console.log('This module cannot be accepted through this script. Sorry about that.');
+        process.exit(0);
+    }
     str = './lesson' + lesson;
     try {
         moduleToInvoke = require(str);
-        console.log(typeof moduleToInvoke, moduleToInvoke);
     } catch (e) {
+        console.log(typeof moduleToInvoke, moduleToInvoke);
         console.log('There is no such a module. Did you mistype?');
         process.exit(1);
     }
     delete (minimist.lesson);
+
 } else if (minimist.game) {
+
     let gameName = (typeof minimist.game === 'string') ? minimist.game.toLowerCase() : moduleToInvoke;
+
     switch (gameName) {
     case 'coin':
         moduleToInvoke = require('./lesson2');
         break;
     case 'blackjack':
         if (minimist.packs) {
-            let packs = minimist.packs;
-            packs = isNumber(packs) ? parseInt(packs) : 1;
-            settings.packs = packs;
-            delete(minimist.packs);
-        }
+                let packs = minimist.packs;
+                packs = isNumber(packs) ? parseInt(packs) : 1;
+                settings.packs = packs;
+                delete (minimist.packs);
+            }
         if (minimist.bank && minimist.bank !== true) {
-            let bank = minimist.bank;
-            bank = isNumber(bank) ? parseInt(bank) : 100;
-            settings.bank = bank;
-            delete(minimist.bank);
-        }
+                let bank = minimist.bank;
+                bank = isNumber(bank) ? parseInt(bank) : 100;
+                settings.bank = bank;
+                delete (minimist.bank);
+            }
         moduleToInvoke = require('./blackjack/');
         break;
     case true:
