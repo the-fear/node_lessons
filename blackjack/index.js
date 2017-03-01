@@ -261,7 +261,7 @@ const shoe = {
  * @param {number} packNumber Packs of cards quantity
  * @returns {undefined}
  */
-function game({bank: bank, packs: packNumber, locale: locale}) {   // player's bank, packs number
+function game({bank: bank, packs: packNumber, lang: locale}) {   // player's bank, packs number
     let winner, bet, prizeRate = 1;
 
     if (!locale && !gameState.locale){
