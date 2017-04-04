@@ -163,3 +163,7 @@ if (minimist.length) {
 }
 
 moduleToInvoke(settings);
+
+// const foo = require('./lesson1')
+
+// foo.then(res => console.log(res))
