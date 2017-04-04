@@ -1,21 +1,34 @@
 'use strict';
 const fs = require('fs');
 const chalk = require('chalk');
+const path = require('path')
+const util = require('util')
 
 const regexpHell = () => {
-    const promise = new Promise((resolve, reject) => {
+  const promise = new Promise((resolve, reject) => {
+  return fs.readFile(path.resolve(__dirname, '../package.json'), (err, buff) => {
+      if (err) {
+        reject(err);
+      }
+      // console.error(args)
+      let res = buff.toString();
+      resolve(res);
+    })
+  });
+  return promise;
+};
 
-        fs.readFile('package.json', function (err, buff) {
-            if (err) {
-                reject(err);
-            }
-            /** @var {string} str */
-            var str = buff.toString(),
-                    res = str.replace(/^\s*"[\w\d-]+":/gmi, chalk.blue('$&'));
-            res = res.replace(/[{}]+/gm, chalk.yellow('$&'));
-            res = res.replace(/^\s*"[\w\d]+"/gmi, chalk.cyan('$&'));
-            res = res.replace(/[\]\[](?!\d)/gm, chalk.yellow('$&'));
+// console.log(regexpHell())
+
+module.exports = regexpHell()
+
+
+
+
+
+
             /*
+вставить после 17 строки
              * Ниже безуспешные попытки справиться с регулярками. Дошло, что управляющие
              * последовательности ASCII сильно смахивают на символ юникода с "хвостиком"
              * но развить "успех" не успел.
@@ -24,15 +37,3 @@ const regexpHell = () => {
 //    res = res.replace(/(\[\d+m)(\s*".*?")(,?)$/gmi, '$1' + chalk.yellow('$2') + '$3');
 //    reg = /(".*")\n/gmi;
 //    console.log(reg.exec(res));
-            resolve(res);
-        });
-    });
-    return promise;
-};
-regexpHell().then(result => {
-//    console.log(result);
-    module.exports = {result: result};
-    console.log(module);
-}, () => {
-    module.exports = 'Error opening the file';
-});
